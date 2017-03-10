@@ -63,6 +63,10 @@ def logged_exec(command, logger, check=True, capture_stdout=False, stdin=None,
         stdin = subprocess.PIPE
     elif stdin is None:
         stdin = devnull
+        # TODO: Setting the system profile in the container fails if stdin
+        # is set to devnull.
+        # This might be due to the call chain via "nixos-container run".
+        stdin = None
 
     if capture_stdout:
         process = subprocess.Popen(command, env=env, stdin=stdin,
