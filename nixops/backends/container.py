@@ -6,6 +6,7 @@ import nixops.util
 import nixops.ssh_util
 import subprocess
 
+
 class ContainerDefinition(MachineDefinition):
     """Definition of a NixOS container."""
 
@@ -15,9 +16,10 @@ class ContainerDefinition(MachineDefinition):
 
     def __init__(self, xml, config):
         MachineDefinition.__init__(self, xml, config)
-        x = xml.find("attrs/attr[@name='container']/attrs")
-        assert x is not None
-        self.host = x.find("attr[@name='host']/string").get("value")
+        cfg = config["container"]
+        self.host = cfg.get("host")
+        self.write_container_config = cfg.get('writeContainerConfig', False)
+
 
 class ContainerState(MachineState):
     """State of a NixOS container."""
@@ -153,6 +155,9 @@ class ContainerState(MachineState):
             self.vm_id = self.host_ssh.run_command(
                 "nixos-container create {0} --ensure-unique-name --system-path '{1}'"
                 .format(self.name[:7], path), capture_stdout=True).rstrip()
+
+            if defn.write_container_config:
+                self._write_container_config()
             self.state = self.STOPPED
 
         if self.state == self.STOPPED:
@@ -166,6 +171,21 @@ class ContainerState(MachineState):
         if self.public_host_key is None:
             self.public_host_key = self.host_ssh.run_command("nixos-container show-host-key {0}".format(self.vm_id), capture_stdout=True).rstrip()
             nixops.known_hosts.add(self.get_ssh_name(), self.public_host_key)
+
+    def _write_container_config(self):
+        config_attr = 'nodes."{0}".config.system.build.containerConf'
+        config_path = subprocess.check_output(
+            ["nix-build"] +
+            self.depl._eval_flags(self.depl.nix_exprs) +
+            ["-A", config_attr.format(self.name)]).rstrip()
+        if self.container_conf == config_path:
+            return
+
+        self.log("Writing container configuration to host")
+        self.copy_closure_to(config_path)
+        self.host_ssh.run_command("cp {0} /etc/containers/{1}.conf".format(
+                config_path, self.name))
+        self.container_conf = config_path
 
     def destroy(self, wipe=False):
         if not self.vm_id: return True
