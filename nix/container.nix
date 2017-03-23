@@ -14,7 +14,10 @@ in
 
 {
 
-  imports = [ ./container-base.nix ];
+  imports = [
+    ./container-base.nix
+    ./exp-container-nixops.nix
+  ];
 
   options = {
 
