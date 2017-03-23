@@ -29,6 +29,7 @@ class ContainerState(MachineState):
     state = nixops.util.attr_property("state", MachineState.MISSING, int)  # override
     private_ipv4 = nixops.util.attr_property("privateIpv4", None)
     host = nixops.util.attr_property("container.host", None)
+    container_conf = nixops.util.attr_property("container.conf", None)
     client_private_key = nixops.util.attr_property("container.clientPrivateKey", None)
     client_public_key = nixops.util.attr_property("container.clientPublicKey", None)
     public_host_key = nixops.util.attr_property("container.publicHostKey", None)
