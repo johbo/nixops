@@ -155,24 +155,23 @@ class ContainerState(MachineState):
             self.vm_id = self.host_ssh.run_command(
                 "nixos-container create {0} --ensure-unique-name --system-path '{1}'"
                 .format(self.name[:7], path), capture_stdout=True).rstrip()
-
-            if defn.write_container_config:
-                self._write_container_config()
             self.state = self.STOPPED
+
+        if defn.write_container_config:
+            self._write_container_config_if_changed(allow_reboot)
 
         if self.state == self.STOPPED:
             self.host_ssh.run_command("nixos-container start {0}".format(self.vm_id))
             self.state = self.UP
 
         if self.private_ipv4 is None:
-            self.private_ipv4 = self.host_ssh.run_command("nixos-container show-ip {0}".format(self.vm_id), capture_stdout=True).rstrip()
-            self.log("IP address is {0}".format(self.private_ipv4))
+            self._read_private_ipv4()
 
         if self.public_host_key is None:
             self.public_host_key = self.host_ssh.run_command("nixos-container show-host-key {0}".format(self.vm_id), capture_stdout=True).rstrip()
             nixops.known_hosts.add(self.get_ssh_name(), self.public_host_key)
 
-    def _write_container_config(self):
+    def _write_container_config_if_changed(self, allow_reboot):
         config_attr = 'nodes."{0}".config.system.build.containerConf'
         config_path = subprocess.check_output(
             ["nix-build"] +
@@ -181,11 +180,36 @@ class ContainerState(MachineState):
         if self.container_conf == config_path:
             return
 
-        self.log("Writing container configuration to host")
+        should_restart = self.state in (self.UP, self.STARTING)
+        if should_restart and not allow_reboot:
+            raise Exception(
+                'Restart of the container "{0}" is needed, '
+                "run with --allow-reboot.".format(self.name))
+        self._write_container_config(config_path)
+        if should_restart:
+            # TODO: implement a nice restart or make reboot work
+            self.stop()
+            self.start()
+            self.wait_for_ssh()
+
+    def _write_container_config(self, config_path):
+        self.log("Updating container configuration")
         self.copy_closure_to(config_path)
         self.host_ssh.run_command("cp {0} /etc/containers/{1}.conf".format(
                 config_path, self.name))
         self.container_conf = config_path
+        if self.private_ipv4:
+            self._read_private_ipv4()
+
+    def _read_private_ipv4(self):
+        if self.private_ipv4:
+            message = "Changed IPv4 address is {0}"
+        else:
+            message = "IPv4 address is {0}"
+        self.private_ipv4 = self.host_ssh.run_command(
+            "nixos-container show-ip {0}".format(self.vm_id),
+            capture_stdout=True).rstrip()
+        self.log(message.format(self.private_ipv4))
 
     def destroy(self, wipe=False):
         if not self.vm_id: return True
