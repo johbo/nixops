@@ -10,34 +10,6 @@ with lib;
 let
   cfg = config.container;
 
-  bindMountOpts = { name, config, ... }: {
-
-    options = {
-      mountPoint = mkOption {
-        example = "/mnt/usb";
-        type = types.str;
-        description = "Mount point on the container file system.";
-      };
-      hostPath = mkOption {
-        default = null;
-        example = "/home/alice";
-        type = types.nullOr types.str;
-        description = "Location of the host path to be mounted.";
-      };
-      isReadOnly = mkOption {
-        default = true;
-        example = true;
-        type = types.bool;
-        description = "Determine whether the mounted path will be accessed in read-only mode.";
-      };
-    };
-
-    config = {
-      mountPoint = mkDefault name;
-    };
-
-  };
-
 in {
   options.container =
   # Grab nearly everything from "containers.<name>"
