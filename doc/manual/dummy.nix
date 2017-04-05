@@ -19,6 +19,15 @@ with lib;
         allow convenient attaching of EC2 volumes.
       '';
     };
+
+    containers = mkOption {
+      type = with types; listOf (submodule {});
+      internal = true;
+      description = ''
+        Workaround, so that options.containers is available when the
+        docs are extracted.
+      '';
+    };
   };
 
 }
