@@ -196,7 +196,7 @@ class ContainerState(MachineState):
         self.log("Updating container configuration")
         self.copy_closure_to(config_path)
         self.host_ssh.run_command("cp {0} /etc/containers/{1}.conf".format(
-                config_path, self.name))
+            config_path, self.vm_id))
         self.container_conf = config_path
         if self.private_ipv4:
             self._read_private_ipv4()
