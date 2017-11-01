@@ -67,7 +67,10 @@ class ContainerState(MachineState):
         flags = super(ContainerState, self).get_ssh_flags(*args, **kwargs)
         flags += ["-i", self.get_ssh_private_key_file()]
         if self.host != "localhost":
-            cmd = "ssh -x -a root@{0} {1} nc {2} {3}".format(self.get_host_ssh(), " ".join(self.get_host_ssh_flags()), self.private_ipv4, self.ssh_port)
+            # TODO: mbld: Adding "2> /dev/null" to prevent nc's "Killed by
+            # signal 1" message. This may also hide some important error
+            # messages. Maybe find another way to suppress this error.
+            cmd = "ssh -x -a root@{0} {1} nc {2} {3} 2> /dev/null".format(self.get_host_ssh(), " ".join(self.get_host_ssh_flags()), self.private_ipv4, self.ssh_port)
             flags.extend(["-o", "ProxyCommand=" + cmd])
         return flags
 
