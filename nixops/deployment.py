@@ -880,7 +880,6 @@ class Deployment(object):
                 max_concurrent_copy=5, sync=True, always_activate=False, repair=False, dry_activate=False):
         """Perform the deployment defined by the deployment specification."""
 
-        self.evaluate_active(include, exclude, kill_obsolete)
 
         # Assign each resource an index if it doesn't have one.
         for r in self.active_resources.itervalues():
@@ -986,12 +985,28 @@ class Deployment(object):
             r.after_activation(self.definitions[r.name])
 
         nixops.parallel.run_tasks(nr_workers=-1, tasks=self.active_resources.itervalues(), worker_fun=cleanup_worker)
-        self.logger.log(ansi_success("{0}> deployment finished successfully".format(self.name or "unnamed"), outfile=self.logger._log_file))
 
-    def deploy(self, **kwargs):
+    def deploy(self, include=[], exclude=[], kill_obsolete=False, **kwargs):
         with self._get_deployment_lock():
+            # Separate containers from other kinds of machines.
+            self.evaluate_active(include, exclude, kill_obsolete)
+            containers = set()
+            others = set()
+            for r in self.active_resources.itervalues():
+                if r.get_type() == 'container':
+                    containers.add(r.name)
+                else:
+                    others.add(r.name)
+
+            # exlude all containers during first deploy phase.
+            kwargs['exclude'] = list(set(exclude) | containers)
             self._deploy(**kwargs)
 
+            # deploy containers during second deploy phase.
+            kwargs['exclude'] = list(set(exclude) | others)
+            self._deploy(**kwargs)
+
+            self.logger.log(ansi_success("{0}> deployment finished successfully".format(self.name or "unnamed"), outfile=self.logger._log_file))
 
     def _rollback(self, generation, include=[], exclude=[], check=False,
                   allow_reboot=False, force_reboot=False,
