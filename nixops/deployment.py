@@ -740,7 +740,7 @@ class Deployment(object):
                 return m.name
             return None
 
-        res = nixops.parallel.run_tasks(nr_workers=-1, tasks=self.active.itervalues(), worker_fun=worker)
+        res = nixops.parallel.run_tasks(nr_workers=1, tasks=self.active.itervalues(), worker_fun=worker)
         failed = [x for x in res if x != None]
         if failed != []:
             raise Exception("activation of {0} of {1} machines failed (namely on {2})"
@@ -950,7 +950,7 @@ class Deployment(object):
                 finally:
                     r._created_event.set()
 
-            nixops.parallel.run_tasks(nr_workers=-1, tasks=self.active_resources.itervalues(), worker_fun=worker)
+            nixops.parallel.run_tasks(nr_workers=1, tasks=self.active_resources.itervalues(), worker_fun=worker)
 
         if create_only: return
 
