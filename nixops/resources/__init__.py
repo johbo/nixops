@@ -156,7 +156,7 @@ class ResourceState(object):
 
     def create_after(self, resources, defn):
         """Return a set of resources that should be created before this one."""
-        return {}
+        return set()
 
     def destroy_before(self, resources):
         """Return a set of resources that should be destroyed after this one."""
