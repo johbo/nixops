@@ -67,11 +67,13 @@ class ContainerState(MachineState):
         flags = super(ContainerState, self).get_ssh_flags(*args, **kwargs)
         flags += ["-i", self.get_ssh_private_key_file()]
         if self.host != "localhost":
-            # TODO: mbld: Adding "2> /dev/null" to prevent nc's "Killed by
-            # signal 1" message. This may also hide some important error
-            # messages. Maybe find another way to suppress this error.
-            cmd = "ssh -x -a root@{0} {1} nc {2} {3} 2> /dev/null".format(self.get_host_ssh(), " ".join(self.get_host_ssh_flags()), self.private_ipv4, self.ssh_port)
-            flags.extend(["-o", "ProxyCommand=" + cmd])
+            proxy_cmd = 'ssh -x -a root@{host} {host_flags} nixos-container run {container} -- nc localhost {container_port}'.format(
+                host=self.get_host_ssh(),
+                host_flags=' '.join(self.get_host_ssh_flags()),
+                container=self.vm_id,
+                container_port=self.ssh_port,
+            )
+            flags.extend(['-o', 'ProxyCommand=' + proxy_cmd])
         return flags
 
     def get_ssh_for_copy_closure(self):
