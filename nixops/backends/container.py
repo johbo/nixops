@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import time
 from nixops.backends import MachineDefinition, MachineState
 from nixops.nix_expr import py2nix
 import nixops.util
@@ -124,8 +125,26 @@ class ContainerState(MachineState):
         else:
             return []
 
+    def get_state(self):
+        """
+        Returns the current state of the container reported by machinectl on
+        the host.
+        """
+        cmd = "machinectl show {container} --property State".format(
+            container=self.vm_id)
+        try:
+            output = self.host_ssh.run_command(
+                cmd, logged=True, capture_stdout=True)
+            state = output.split("=")[1]
+        except nixops.ssh_util.SSHCommandFailed as e:
+            state = '__error__'
+        return state
+
     def wait_for_ssh(self, check=False):
-        return True
+        # TODO: Add better logging and a timeout.
+        while self.get_state() == "running":
+            self.log("waiting for conatainer to become ready...")
+            time.sleep(1)
 
     # Run a command in the container via ‘nixos-container run’. Since
     # this uses ‘nsenter’, we don't need SSH in the container.
