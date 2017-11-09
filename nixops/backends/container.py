@@ -68,13 +68,13 @@ class ContainerState(MachineState):
             # TODO: Untested so far.
             cmd_list = [
                 'nixos-container', 'run', '{container}', '--',
-                'nc', 'localhost', '{container_port}',
+                'nc', 'localhost', '{container_port}', '2>', '/dev/null',
             ]
         else:
             cmd_list = [
                 'ssh', '-x', '-a', 'root@{host}', '{host_flags}',
                 'nixos-container', 'run', '{container}', '--',
-                'nc', 'localhost', '{container_port}',
+                'nc', 'localhost', '{container_port}', '2>', '/dev/null',
             ]
         proxy_command = ' '.join(cmd_list).format(
             host=self.get_host_ssh(),
