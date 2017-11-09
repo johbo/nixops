@@ -275,12 +275,33 @@ class ContainerState(MachineState):
         self.state = self.STOPPED
 
     def start(self):
-        if not self.vm_id: return True
+        """
+        Starts the container by using 'nixos-container start'. The start
+        command may block in case of missing deployment keys on the container.
+        Therefore we start the container in parallel with sending the
+        deployment keys to it.
+        """
+        if not self.vm_id:
+            return True
+
+        def worker(task):
+            if task == "start":
+                self.host_ssh.run_command(
+                    "nixos-container start {0}".format(self.vm_id))
+            elif task == "send_keys":
+                self.wait_for_ssh()
+                self.send_keys()
+            else:
+                raise Exception("Unknown task '{}'".format(task))
+
         self.log("starting container...")
-        self.host_ssh.run_command("nixos-container start {0}".format(self.vm_id))
         self.state = self.STARTING
-        self.wait_for_ssh()
-        self.send_keys()
+        # FIXME: Produces the following error output:
+        # 'mux_client_request_session: read from master failed: Broken pipe'
+        nixops.parallel.run_tasks(
+            nr_workers=2,
+            tasks=["start", "send_keys"],
+            worker_fun=worker)
 
     def _check(self, res):
         if not self.vm_id:
