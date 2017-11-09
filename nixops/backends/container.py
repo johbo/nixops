@@ -62,8 +62,13 @@ class ContainerState(MachineState):
         return self._ssh_private_key_file or self.write_ssh_private_key(self.client_private_key)
 
     def get_ssh_proxy_command(self):
-        # When using a remote container host, we have to proxy the ssh
-        # connection to the container via the host.
+        '''
+        When using a remote container host, we have to proxy the ssh connection
+        to the container via the host. Connection from host to conatainer is
+        established by 'nixos-container run' together with 'nc'. This way we
+        can access the containers sshd even if network interfaces are not set
+        up or container is not reachable by network from the host.
+        '''
         if self.host == 'localhost':
             # TODO: Untested so far.
             cmd_list = [
