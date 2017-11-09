@@ -61,19 +61,35 @@ class ContainerState(MachineState):
     def get_ssh_private_key_file(self):
         return self._ssh_private_key_file or self.write_ssh_private_key(self.client_private_key)
 
-    def get_ssh_flags(self, *args, **kwargs):
+    def get_ssh_proxy_command(self):
         # When using a remote container host, we have to proxy the ssh
         # connection to the container via the host.
+        if self.host == 'localhost':
+            # TODO: Untested so far.
+            cmd_list = [
+                'nixos-container', 'run', '{container}', '--',
+                'nc', 'localhost', '{container_port}',
+            ]
+        else:
+            cmd_list = [
+                'ssh', '-x', '-a', 'root@{host}', '{host_flags}',
+                'nixos-container', 'run', '{container}', '--',
+                'nc', 'localhost', '{container_port}',
+            ]
+        proxy_command = ' '.join(cmd_list).format(
+            host=self.get_host_ssh(),
+            host_flags=' '.join(self.get_host_ssh_flags()),
+            container=self.vm_id,
+            container_port=self.ssh_port,
+        )
+        return proxy_command
+
+    def get_ssh_flags(self, *args, **kwargs):
         flags = super(ContainerState, self).get_ssh_flags(*args, **kwargs)
-        flags += ["-i", self.get_ssh_private_key_file()]
-        if self.host != "localhost":
-            proxy_cmd = 'ssh -x -a root@{host} {host_flags} nixos-container run {container} -- nc localhost {container_port}'.format(
-                host=self.get_host_ssh(),
-                host_flags=' '.join(self.get_host_ssh_flags()),
-                container=self.vm_id,
-                container_port=self.ssh_port,
-            )
-            flags.extend(['-o', 'ProxyCommand=' + proxy_cmd])
+        flags.extend([
+            '-i', self.get_ssh_private_key_file(),
+            '-o', 'ProxyCommand={}'.format(self.get_ssh_proxy_command()),
+        ])
         return flags
 
     def get_ssh_for_copy_closure(self):
