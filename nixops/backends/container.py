@@ -125,25 +125,29 @@ class ContainerState(MachineState):
         else:
             return []
 
-    def get_state(self):
+    def get_unit_property(self, unit, prop):
         """
-        Returns the current state of the container reported by machinectl on
-        the host.
+        Returns the property of a systemd-unit in the container. Returns the
+        special value '__error__' if something went wrong e.g. the container
+        doesn't exist or is not yet ready to run commands.
         """
-        cmd = "machinectl show {container} --property State".format(
-            container=self.vm_id)
+        cmd = [
+            "nixos-container", "run", "{container}", "--",
+            "systemctl", "show", "--property", "{prop}", "--value", "{unit}"
+        ]
+        cmd = ' '.join(cmd).format(container=self.vm_id, unit=unit, prop=prop)
         try:
-            output = self.host_ssh.run_command(
-                cmd, logged=True, capture_stdout=True)
-            state = output.split("=")[1]
+            value = self.host_ssh.run_command(
+                cmd, logged=True, capture_stdout=True).strip()
         except nixops.ssh_util.SSHCommandFailed as e:
-            state = '__error__'
-        return state
+            value = '__error__'
+        return value
 
     def wait_for_ssh(self, check=False):
-        # TODO: Add better logging and a timeout.
-        while self.get_state() == "running":
-            self.log("waiting for conatainer to become ready...")
+        # TODO: Add a timeout.
+        while self.get_unit_property(
+                "sshd.service", "ActiveState") != "active":
+            self.log("waiting for containers sshd.service to become active...")
             time.sleep(1)
 
     # Run a command in the container via ‘nixos-container run’. Since
