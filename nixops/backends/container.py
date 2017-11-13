@@ -209,11 +209,11 @@ class ContainerState(MachineState):
         if defn.write_container_config:
             self._write_container_config_if_changed(allow_reboot)
 
-        if self.state == self.STOPPED:
+        if self.state == self.STOPPED or check:
             self.host_ssh.run_command("nixos-container start {0}".format(self.vm_id))
             self.state = self.UP
 
-        if self.private_ipv4 is None:
+        if self.private_ipv4 is None or check:
             self._read_private_ipv4()
 
         if self.public_host_key is None:
