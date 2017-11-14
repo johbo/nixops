@@ -998,13 +998,19 @@ class Deployment(object):
                 else:
                     others.add(r.name)
 
+            # Put arguments back into kwargs
+
             # exlude all containers during first deploy phase.
-            kwargs['exclude'] = list(set(exclude) | containers)
-            self._deploy(**kwargs)
+            current_exclude = list(set(exclude) | containers)
+            self._deploy(
+                include=include, exclude=current_exclude,
+                kill_obsolete=kill_obsolete, **kwargs)
 
             # deploy containers during second deploy phase.
-            kwargs['exclude'] = list(set(exclude) | others)
-            self._deploy(**kwargs)
+            current_exclude = list(set(exclude) | others)
+            self._deploy(
+                include=include, exclude=current_exclude,
+                kill_obsolete=kill_obsolete, **kwargs)
 
             self.logger.log(ansi_success("{0}> deployment finished successfully".format(self.name or "unnamed"), outfile=self.logger._log_file))
 
