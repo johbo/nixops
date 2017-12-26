@@ -1001,12 +1001,14 @@ class Deployment(object):
             # Put arguments back into kwargs
 
             # exlude all containers during first deploy phase.
+            self.logger.log("Deploying all non-containers in the first phase")
             current_exclude = list(set(exclude) | containers)
             self._deploy(
                 include=include, exclude=current_exclude,
                 kill_obsolete=kill_obsolete, **kwargs)
 
             # deploy containers during second deploy phase.
+            self.logger.log("Deploying containers in the second phase")
             current_exclude = list(set(exclude) | others)
             self._deploy(
                 include=include, exclude=current_exclude,
