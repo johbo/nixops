@@ -250,16 +250,26 @@ class Deployment(object):
         flags.extend(["-I", "nixops=" + self.expr_path])
         return flags
 
+    def _eval_args(self, exprs):
+        args = {key: RawValue(val) for key, val in self.args.iteritems()}
+        exprs_ = [RawValue(x) if x[0] == '<' else x for x in exprs]
+        eval_args = {
+            'networkExprs' : exprs_,
+            'args' : args,
+            'uuid' : self.uuid,
+            'deploymentName' : self.name if self.name else ""
+        }
+        return eval_args
+
 
     def _eval_flags(self, exprs):
         flags = self._nix_path_flags()
-        args = {key: RawValue(val) for key, val in self.args.iteritems()}
-        exprs_ = [RawValue(x) if x[0] == '<' else x for x in exprs]
+        args = self._eval_args(exprs)
         flags.extend(
-            ["--arg", "networkExprs", py2nix(exprs_, inline=True),
-             "--arg", "args", py2nix(args, inline=True),
-             "--argstr", "uuid", self.uuid,
-             "--argstr", "deploymentName", self.name if self.name else "",
+            ["--arg", "networkExprs", py2nix(args['networkExprs'], inline=True),
+             "--arg", "args", py2nix(args['args'], inline=True),
+             "--argstr", "uuid", args['uuid'],
+             "--argstr", "deploymentName", args['deploymentName'],
              "<nixops/eval-machine-info.nix>"])
         return flags
 
