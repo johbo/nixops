@@ -10,14 +10,17 @@ let
     configuration = machine-configuration;
   };
 
+  nixosVersion = machine.config.system.nixosVersion;
+  imageName = "virtualbox-nixops-${nixosVersion}.vmdk";
+
   pkgs = import <nixpkgs> { };
 
 in rec {
   ova = machine.config.system.build.virtualBoxOVA;
 
-  nixos-disk = pkgs.stdenv.mkDerivation rec {
+  baseImage = pkgs.stdenv.mkDerivation rec {
     name = "virtualbox-nixops-image-${version}";
-    version = machine.config.system.nixosVersion;
+    version = nixosVersion;
     phases = [ "installPhase" ];
     nativeBuildInputs = [
       ova
@@ -28,8 +31,23 @@ in rec {
       mv ova/{nixos*,nixos}.vmdk
 
       mkdir -p $out
-      name=$out/virtualbox-nixops-${version}.vmdk.xz
-      xz < ./ova/nixos.vmdk > $name
+      name=$out/${imageName}
+      cp ./ova/nixos.vmdk $name
+      sha256sum $name > $name.sha256
+    '';
+  };
+
+  baseImageArchive = pkgs.stdenv.mkDerivation rec {
+    name = "virtualbox-nixops-image-archive-${version}";
+    version = nixosVersion;
+    phases = [ "installPhase" ];
+    nativeBuildInputs = [
+      baseImage
+    ];
+    installPhase = ''
+      mkdir -p $out
+      name=$out/${imageName}.xz
+      xz < ${baseImage}/${imageName} > $name
       sha256sum $name > $name.sha256
     '';
   };
