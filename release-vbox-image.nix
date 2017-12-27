@@ -34,6 +34,9 @@ in rec {
       name=$out/${imageName}
       cp ./ova/nixos.vmdk $name
       sha256sum $name > $name.sha256
+
+      mkdir -p $out/nix-support
+      echo "file vmdk $name" >> $out/nix-support/hydra-build-products
     '';
   };
 
@@ -49,6 +52,9 @@ in rec {
       name=$out/${imageName}.xz
       xz < ${baseImage}/${imageName} > $name
       sha256sum $name > $name.sha256
+
+      mkdir -p $out/nix-support
+      echo "file vmdk $name" >> $out/nix-support/hydra-build-products
     '';
   };
 }
