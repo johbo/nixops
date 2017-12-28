@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import subprocess
 import time
+
 from nixops.backends import MachineDefinition, MachineState
 from nixops.nix_expr import py2nix
 import nixops.util
 import nixops.ssh_util
-import subprocess
 
 
 class ContainerDefinition(MachineDefinition):
